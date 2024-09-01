@@ -1,0 +1,36 @@
+image: Ubuntu
+
+platform:
+  - x64
+
+cache:
+  - node_modules
+
+init:
+  - git config --global core.autocrlf input
+  - git config --global user.name "Glebka"
+  - git config --global user.email "Glebka@users.noreply.github.com"
+
+environment:
+  nodejs_version: v20.17.0
+  access_token:
+    secure: v0KmRXKjb7xxVPv37QBOuJAZDEHcm4mZJBgLJbZyYK+H0ksZ7w8sFpjZRQT2e1MF
+
+install:
+  - nvm install $nodejs_version
+  - nvm use $nodejs_version
+  - yarn
+
+build_script:
+  - yarn build
+
+on_success:
+  - git config --global credential.helper store
+  - echo "https://$access_token:x-oauth-basic@github.com" > $HOME\.git-credentials
+  - git clone https://github.com/SvitloPulse/svitlopulse.github.io
+  - cd svitlopulse.github.io
+  - mkdir -p webinstaller
+  - cp -r ../build/* webinstaller
+  - git add -A
+  - git commit -m "Update webinstaller"
+  - git push origin master
