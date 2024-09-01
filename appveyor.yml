@@ -1,4 +1,4 @@
-image: Ubuntu
+image: Ubuntu2004
 
 platform:
   - x64
@@ -12,7 +12,7 @@ init:
   - git config --global user.email "Glebka@users.noreply.github.com"
 
 environment:
-  nodejs_version: v20.17.0
+  nodejs_version: v20.12.2
   access_token:
     secure: v0KmRXKjb7xxVPv37QBOuJAZDEHcm4mZJBgLJbZyYK+H0ksZ7w8sFpjZRQT2e1MF
 
