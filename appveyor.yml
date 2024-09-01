@@ -30,7 +30,7 @@ on_success:
   - git clone https://github.com/SvitloPulse/svitlopulse.github.io
   - cd svitlopulse.github.io
   - mkdir -p webinstaller
-  - cp -r ../build/* webinstaller
+  - cp -r ../dist/* webinstaller
   - git add -A
   - git commit -m "Update webinstaller"
   - git push origin master
