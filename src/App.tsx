@@ -1,4 +1,3 @@
-import * as React from "react";
 import Avatar from "@mui/material/Avatar";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
@@ -6,38 +5,30 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Button, Step, StepLabel, Stepper } from "@mui/material";
-import SerialConnectStep from "./SerialConnectStep";
+import { SerialConnectStep } from "./SerialConnectStep";
 import { Settings } from "@mui/icons-material";
 import WiFiConfigStep from "./WiFiConfigStep";
 import FlashingStep from "./FlashingStep";
+import { observer } from "mobx-react-lite";
+import { stepsController } from "./services/StepsController";
+import { espFlasher } from "./services/EspFlasher";
+import { useRef } from "react";
 
 const defaultTheme = createTheme();
 
-type StepTypes =
-  "serial_connect"
-  | "wifi"
-  | "flashing"
-  | "done";
-
-export default function App() {
-  const [activeStep, setActiveStep] = React.useState<StepTypes>("serial_connect");
-  const steps = ["serial_connect", "wifi", "flashing", "done"];
-  const [isNextActive, setIsNextActive] = React.useState(true);
-  const [isBackActive, setIsBackActive] = React.useState(false);
-  const handleNext = () => {
-    const newStepIndex = steps.indexOf(activeStep) + 1;
-    if (newStepIndex < steps.length) {
-      setActiveStep(steps[newStepIndex] as StepTypes);
-    }
-    setIsBackActive(true);
-  };
-  const handleBack = () => {
-    const newStepIndex = steps.indexOf(activeStep) - 1;
-    if (newStepIndex >= 0) {
-      setActiveStep(steps[newStepIndex] as StepTypes);
-    }
-    setIsNextActive(true);
-  };
+const App = observer(() => {
+  const {
+    activeStep,
+    canGoBack,
+    canGoNext,
+    goBack,
+    goNext,
+    isCompleted,
+    setCanGoBack,
+    setCanGoNext,
+  } = stepsController;
+  const nextButton = useRef<HTMLButtonElement>(null);
+  const backButton = useRef<HTMLButtonElement>(null);
   return (
     <ThemeProvider theme={defaultTheme}>
       <Container component="main" maxWidth="md">
@@ -53,53 +44,41 @@ export default function App() {
             <Settings />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Налаштування Svitlo Pulse
+            Прошивка та налаштування SvitloPulse
           </Typography>
         </Box>
-        <Box sx={{ width: "100%", mt: (theme) => theme.spacing(2)  }}>
+        <Box sx={{ width: "100%", mt: (theme) => theme.spacing(2) }}>
           <Stepper>
-            <Step active={activeStep == "serial_connect"}>
+            <Step
+              active={activeStep == "serial_connect"}
+              completed={isCompleted("serial_connect")}
+            >
               <StepLabel>Підключення пристрою</StepLabel>
             </Step>
-            <Step active={activeStep == "wifi"}>
+            <Step active={activeStep == "wifi"} completed={isCompleted("wifi")}>
               <StepLabel>Налаштування WiFi</StepLabel>
             </Step>
-            <Step active={activeStep == "flashing"}>
+            <Step
+              active={activeStep == "flashing"}
+              completed={isCompleted("flashing")}
+            >
               <StepLabel>Завантаження ПЗ</StepLabel>
-            </Step>
-            <Step active={activeStep == "done"}>
-              <StepLabel>Готово!</StepLabel>
             </Step>
           </Stepper>
           {activeStep == "serial_connect" && (
-            <SerialConnectStep
-              setIsBackActive={setIsBackActive}
-              setIsNextActive={setIsNextActive}
-              onDeviceSelected={(esploader) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (window as any).esploader = esploader;
-              }}
-            />
+            <SerialConnectStep nextButton={nextButton} />
           )}
           {activeStep == "wifi" && (
             <WiFiConfigStep
-              setIsBackActive={setIsBackActive}
-              setIsNextActive={setIsNextActive}
+              setIsBackActive={setCanGoBack}
+              setIsNextActive={setCanGoNext}
               onFormSubmit={(data) => {
-                window.config = data;
+                espFlasher.setConfig(data);
               }}
             />
           )}
-          {activeStep == "flashing" && (
-            <FlashingStep
-              setIsBackActive={setIsBackActive}
-              setIsNextActive={setIsNextActive}
-              onFlashingFinished={() => {
-                console.log('Flashing finished');
-              }}
-            />
-          )}
-          
+          {activeStep == "flashing" && <FlashingStep />}
+
           <Box
             sx={{
               display: "flex",
@@ -111,12 +90,18 @@ export default function App() {
             <Button
               color="inherit"
               sx={{ mr: 1 }}
-              onClick={handleBack}
-              disabled={!isBackActive}
+              onClick={goBack}
+              disabled={!canGoBack}
+              ref={backButton}
             >
               Назад
             </Button>
-            <Button onClick={handleNext} disabled={!isNextActive} color="primary">
+            <Button
+              onClick={goNext}
+              disabled={!canGoNext}
+              color="primary"
+              ref={nextButton}
+            >
               Далі
             </Button>
           </Box>
@@ -124,4 +109,6 @@ export default function App() {
       </Container>
     </ThemeProvider>
   );
-}
+});
+
+export default App;

@@ -26,6 +26,7 @@ const IconTextButtonSection: React.FC<IconTextButtonSectionProps> = ({
       { text && <Typography sx={{ mt: 2, mb: 1 }}>{text}</Typography>}
       {children ? children : null}
       <Button
+        autoFocus
         variant="outlined"
         sx={{ mt: 2 }}
         onClick={() => {

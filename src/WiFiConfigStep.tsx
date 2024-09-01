@@ -1,13 +1,23 @@
 import {
   Box,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { Key, SignalWifi3BarLock, Wifi, WifiPassword } from "@mui/icons-material";
+import {
+  Key,
+  SignalWifi3BarLock,
+  Visibility,
+  VisibilityOff,
+  Wifi,
+  WifiPassword,
+} from "@mui/icons-material";
 import { useEffect } from "react";
 import { Formik } from "formik";
+import { stepsController } from "./services/StepsController";
+import React from "react";
 
 type FormData = {
   ssid: string;
@@ -26,10 +36,15 @@ function WiFiConfigStep({
   setIsNextActive,
   onFormSubmit,
 }: WifiConfigStepProps) {
+
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showKey, setShowKey] = React.useState(false);
+  
   useEffect(() => {
     setIsBackActive(true);
     setIsNextActive(false);
   }, []);
+
   return (
     <Box
       sx={{
@@ -81,6 +96,7 @@ function WiFiConfigStep({
             onSubmit={(values, { setSubmitting }) => {
               onFormSubmit(values);
               setSubmitting(false);
+              stepsController.goNext();
             }}
           >
             {({
@@ -92,7 +108,15 @@ function WiFiConfigStep({
               handleSubmit,
               /* and other goodies */
             }) => (
-              <form onSubmit={handleSubmit}>
+              <form
+                onSubmit={handleSubmit}
+                // TODO: looks like a hack, get rid of it if possible
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSubmit();
+                  }
+                }}
+              >
                 <Stack
                   spacing={2}
                   sx={{ width: "100%", mt: 2 }}
@@ -121,15 +145,27 @@ function WiFiConfigStep({
                   <TextField
                     label="Пароль мережі"
                     variant="outlined"
-                    type="password"
+                    type={showPassword ? "text": "password"}
                     required
                     fullWidth
                     error={!!(errors.password && touched.password)}
-                    helperText={errors.password && touched.password && errors.password}
+                    helperText={
+                      errors.password && touched.password && errors.password
+                    }
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
                           <WifiPassword />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
                         </InputAdornment>
                       ),
                       name: "password",
@@ -141,7 +177,7 @@ function WiFiConfigStep({
                   <TextField
                     label="Ключ Світлобота"
                     variant="outlined"
-                    type="password"
+                    type={showKey ? "text" : "password"}
                     required
                     fullWidth
                     error={!!(errors.key && touched.key)}
@@ -150,6 +186,16 @@ function WiFiConfigStep({
                       startAdornment: (
                         <InputAdornment position="start">
                           <Key />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowKey(!showKey)}
+                            edge="end"
+                          >
+                            {showKey ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
                         </InputAdornment>
                       ),
                       name: "key",
