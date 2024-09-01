@@ -26,7 +26,7 @@ build_script:
 
 on_success:
   - git config --global credential.helper store
-  - echo "https://$access_token:x-oauth-basic@github.com" > $HOME\.git-credentials
+  - echo "https://$access_token:x-oauth-basic@github.com" > $HOME/.git-credentials
   - git clone https://github.com/SvitloPulse/svitlopulse.github.io
   - cd svitlopulse.github.io
   - mkdir -p webinstaller
