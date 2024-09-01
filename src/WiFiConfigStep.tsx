@@ -110,12 +110,6 @@ function WiFiConfigStep({
             }) => (
               <form
                 onSubmit={handleSubmit}
-                // TODO: looks like a hack, get rid of it if possible
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSubmit();
-                  }
-                }}
               >
                 <Stack
                   spacing={2}
