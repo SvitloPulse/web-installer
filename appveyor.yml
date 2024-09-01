@@ -22,7 +22,7 @@ install:
   - yarn
 
 build_script:
-  - yarn build
+  - yarn prod
 
 on_success:
   - git config --global credential.helper store
