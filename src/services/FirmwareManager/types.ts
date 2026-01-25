@@ -8,7 +8,22 @@ export interface BoardEntry {
   boardId: string;
   boardName: string;
   chipId: string;
-  files: FirmwareFile[]
+  files: FirmwareFile[];
+  flashSize?: string;
+  hwConfig?: HardwareConfigEntry;
+  userConfig?: UserConfigEntry;
+}
+
+export interface HardwareConfigEntry {
+  led_pin: number;
+  led_act_low: number;
+  led_str_en: number;
+}
+
+export interface UserConfigEntry {
+  icmp_en: number;
+  icmp_tgt: string;
+  sb_url: string;
 }
 
 export interface ChipEntry {

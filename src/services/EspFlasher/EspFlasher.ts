@@ -7,7 +7,7 @@ import {
 } from "./types";
 import { serial, SerialPort } from "web-serial-polyfill";
 import { ESPLoader, FlashOptions, LoaderOptions, Transport } from "esptool-js";
-import { FirmwareFile, firmwareManager } from "../FirmwareManager";
+import { FirmwareFile, firmwareManager, HardwareConfigEntry, UserConfigEntry } from "../FirmwareManager";
 import { loadPyodide, PyodideInterface } from "pyodide";
 
 // @ts-expect-error Navigator should have Web Serial support
@@ -124,24 +124,60 @@ class EspFlasher {
     this.nvsGenModule = this.py.pyimport("nvs_gen");
   };
 
-  _generateNvsPartition = (config: SvitloPulseConfig) => {
-    return Uint8Array.from(
-      this.nvsGenModule.create_nvs_bin(config.ssid, config.password, config.key)
-    ).reduce(
-      (str, byte) => str + String.fromCharCode(byte),
-      ""
-    );
+  _generateNvsPartition = (
+    config: SvitloPulseConfig,
+    hwConfig?: HardwareConfigEntry,
+    userConfig?: UserConfigEntry
+  ) => {
+    const args = {
+      ssid: config.ssid,
+      password: config.password,
+      sb_cfg: {
+        key: { value: config.key, type: "string" },
+        led_pin: {value: hwConfig?.led_pin ?? 8, type: "u8"},
+        led_act_low: {value: hwConfig?.led_act_low ?? 1, type: "u8"},
+        led_str_en: {value: hwConfig?.led_str_en ?? 0, type: "u8"},
+        icmp_en: {value: Number(userConfig?.icmp_en ?? 0), type: "u8"},
+        icmp_tgt: {value: userConfig?.icmp_tgt ?? "", type: "string"},
+        sb_url: {value: userConfig?.sb_url ?? "", type: "string"},
+      }
+    };
+
+    // Convert JS object to Python dict for Pyodide
+    const pyArgs = this.py ? (this.py as unknown as { toPy: (value: unknown) => unknown }).toPy(args) : args;
+    try {
+      return Uint8Array.from(
+        this.nvsGenModule.create_nvs_bin(pyArgs)
+      ).reduce(
+        (str, byte) => str + String.fromCharCode(byte),
+        ""
+      );
+    } finally {
+      const maybeDestroy = pyArgs as { destroy?: () => void } | null;
+      if (maybeDestroy?.destroy) {
+        maybeDestroy.destroy();
+      }
+    }
   }
 
-  flash = async (release: string, firmwareFile: FirmwareFile) => {
+  flash = async (release: string, boardId: string, firmwareFile: FirmwareFile) => {
     runInAction(() => {
       this.flashingStatus = "preparing";
     });
     let nvsPartitionBlob = "";
     let firmwareBlob = "";
     try {
+      console.log("Flashing board", boardId);
+      const board = firmwareManager.getBoard(this.chipInfo!.mcu, boardId);
+      if (!board) {
+        throw new Error("Board config not found");
+      }
       await this._loadPyodide();
-      nvsPartitionBlob = this._generateNvsPartition(this.config!);
+      nvsPartitionBlob = this._generateNvsPartition(
+        this.config!,
+        board.hwConfig,
+        board.userConfig
+      );
       firmwareBlob = await firmwareManager.downloadFirmwareFile(release, firmwareFile.name);
     } catch (e) {
       console.error(e);

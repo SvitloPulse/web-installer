@@ -90,6 +90,10 @@ class FirmwareManager {
     return Object.values(this.manifest.supportedChips[chipId].boards);
   };
 
+  getBoard = (chipId: string, boardId: string): BoardEntry | undefined => {
+    return this.manifest.supportedChips?.[chipId]?.boards?.[boardId];
+  };
+
   getFirmwareFileName = (chipId: string, boardId: string): string => {
     return this.manifest.supportedChips[chipId].boards[boardId].files[0].name;
   };

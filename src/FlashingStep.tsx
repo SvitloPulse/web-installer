@@ -28,10 +28,13 @@ const FlashingStep = observer(
     const { releases, manifest, getFirmwareFileURL, setActiveRelease } =
       firmwareManager;
     const [selectedRelease, setSelectedRelease] = useState<string>("");
+    const [selectedBoardId, setSelectedBoardId] = useState<string>("");
     const chipId = chipInfo?.mcu;
-    const board = chipId
-      ? Object.values(manifest.supportedChips?.[chipId]?.boards ?? {})[0]
-      : undefined;
+    const boards = chipId
+      ? Object.values(manifest.supportedChips?.[chipId]?.boards ?? {})
+      : [];
+    const board =
+      boards.find((entry) => entry.boardId === selectedBoardId) ?? boards[0];
     const firmwareFile = board?.files[0]?.name ?? "";
     const firmwareFileSha256 = board?.files[0]?.sha256 ?? "";
     // const firmwareFileURL =
@@ -44,11 +47,22 @@ const FlashingStep = observer(
         const latest = releases[releases.length - 1];
         setSelectedRelease(latest);
         setActiveRelease(latest);
-        if (chipId && board) {
-          setFirmwareFileURL(getFirmwareFileURL(latest, chipId, board.boardId));
-        }
       }
-    }, [board, chipId, getFirmwareFileURL, releases, selectedRelease, setActiveRelease]);
+    }, [releases, selectedRelease, setActiveRelease]);
+
+    useEffect(() => {
+      if (boards.length > 0 && !boards.some((entry) => entry.boardId === selectedBoardId)) {
+        setSelectedBoardId(boards[0].boardId);
+      }
+    }, [boards, selectedBoardId]);
+
+    useEffect(() => {
+      if (selectedRelease && chipId && board) {
+        setFirmwareFileURL(
+          getFirmwareFileURL(selectedRelease, chipId, board.boardId)
+        );
+      }
+    }, [board, chipId, getFirmwareFileURL, selectedRelease]);
 
     useEffect(() => {
       const activeStatuses: EspFlasherFlashingStatus[] = ["preparing", "erasing_flash", "flashing_firmware"];
@@ -103,6 +117,26 @@ const FlashingStep = observer(
           {flashingStatus === "idle" && (
             <IconTextSection Icon={UsbOutlined}>
               <FormControl sx={{ mt: 2, mb: 1, minWidth: 240 }} size="small">
+                <InputLabel id="firmware-board-label">
+                  Плата
+                </InputLabel>
+                <Select
+                  labelId="firmware-board-label"
+                  label="Плата"
+                  value={selectedBoardId}
+                  onChange={(event) => {
+                    setSelectedBoardId(event.target.value as string);
+                  }}
+                  disabled={boards.length <= 1}
+                >
+                  {boards.map((entry) => (
+                    <MenuItem key={entry.boardId} value={entry.boardId}>
+                      {entry.boardName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl sx={{ mt: 2, mb: 1, minWidth: 240 }} size="small">
                 <InputLabel id="firmware-release-label">
                   Версія ПЗ
                 </InputLabel>
@@ -114,9 +148,6 @@ const FlashingStep = observer(
                     const release = event.target.value as string;
                     setSelectedRelease(release);
                     await setActiveRelease(release);
-                    if (chipId && board) {
-                      setFirmwareFileURL(getFirmwareFileURL(release, chipId, board.boardId));
-                    }
                   }}
                 >
                   {[...releases].reverse().map((release) => (
@@ -144,7 +175,7 @@ const FlashingStep = observer(
                 variant="outlined"
                 sx={{ mt: 2, mb: 2 }}
                 onClick={() => {
-                  flash(selectedRelease, board.files[0]);
+                  flash(selectedRelease, board.boardId, board.files[0]);
                 }}
                 disabled={!selectedRelease}
                 autoFocus
