@@ -8,23 +8,35 @@ const BASE_URL =
 class FirmwareManager {
   manifest: Manifest = {} as Manifest;
   releases: string[] = [];
+  manifestByRelease: Record<string, Manifest> = {};
+  activeRelease: string | null = null;
   initialized: boolean = false;
 
   constructor() {
     makeObservable(this, {
       manifest: observable,
       releases: observable,
+      manifestByRelease: observable,
+      activeRelease: observable,
       initialized: observable,
       fetchManifest: action,
+      setActiveRelease: action,
     });
 
     (async () => {
-      const releases = await this.fetchAvailableReleases();
-      const manifest = await this.fetchManifest(releases[releases.length - 1]);
+      const releases = (await this.fetchAvailableReleases()) ?? [];
+      const latestRelease = releases[releases.length - 1];
+      const manifest = latestRelease
+        ? await this.fetchManifest(latestRelease)
+        : undefined;
       runInAction(() => {
         this.initialized = true;
         this.releases = releases;
-        this.manifest = manifest;
+        if (manifest && latestRelease) {
+          this.manifest = manifest;
+          this.activeRelease = latestRelease;
+          this.manifestByRelease[latestRelease] = manifest;
+        }
       });
     })();
   }
@@ -35,6 +47,7 @@ class FirmwareManager {
       return await res.json();
     } catch (e) {
       console.error(e);
+      return [];
     }
   };
 
@@ -45,6 +58,28 @@ class FirmwareManager {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  setActiveRelease = async (release: string) => {
+    const cachedManifest = this.manifestByRelease[release];
+    if (cachedManifest) {
+      runInAction(() => {
+        this.manifest = cachedManifest;
+        this.activeRelease = release;
+      });
+      return;
+    }
+
+    const manifest = await this.fetchManifest(release);
+    if (!manifest) {
+      return;
+    }
+
+    runInAction(() => {
+      this.manifest = manifest;
+      this.activeRelease = release;
+      this.manifestByRelease[release] = manifest;
+    });
   };
 
   isChipSupported = (chipId: string) => {
@@ -59,8 +94,7 @@ class FirmwareManager {
     return this.manifest.supportedChips[chipId].boards[boardId].files[0].name;
   };
 
-  getFirmwareFileURL = (chipId: string, boardId: string): string => {
-    const release = this.manifest.version;
+  getFirmwareFileURL = (release: string, chipId: string, boardId: string): string => {
     return BASE_URL + release + "/" + this.getFirmwareFileName(chipId, boardId);
   }
 
